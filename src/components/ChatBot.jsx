@@ -20,7 +20,7 @@ const MedicalChatbot = () => {
   useEffect(() => {
     // Fetch patient details using patient_id from URL
     if (patient_id) {
-      axios.get(`http://192.168.28.205:5000/get_detailed_report/${patient_id}`)
+      axios.get(`${import.meta.env.VITE_PATIENT_API_URL}/get_detailed_report/${patient_id}`)
         .then(response => {
           setPatientDetails(response.data);
           
@@ -80,7 +80,7 @@ const MedicalChatbot = () => {
 
     try {
       const updatedConversation = [ ...conversation, { role: 'user', content: userInput } ];
-      const response = await axios.post('http://192.168.137.73:8080/chat', {
+      const response = await axios.post(`${import.meta.env.VITE_CHAT_API_URL}/chat`, {
         context,
         conversation: updatedConversation
       });

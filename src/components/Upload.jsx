@@ -84,7 +84,7 @@ export function FileUploadDemo() {
         });
       }, 200);
 
-      const response = await axios.post("http://192.168.137.79:8000/api/extract-aadhaar", formData, {
+      const response = await axios.post(`${import.meta.env.VITE_UPLOAD_API_URL}/api/extract-aadhaar`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

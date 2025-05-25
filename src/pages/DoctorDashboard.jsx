@@ -11,51 +11,70 @@ import {
   Users,
   Activity,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  FileText // Added for summary icon
 } from 'lucide-react';
 
-const doctorName = "Dr. Smith";
+const doctorName = "Dr. Smith"; // This remains static as per current design
 
 function DoctorDashboard() {
-  const [appointments, setAppointments] = useState([]);
-  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all'); // Status filtering logic is not implemented with new data
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const formatDate = (dateString) => {
+    if (!dateString || typeof dateString !== 'string' || dateString.toLowerCase() === 'none') {
+      return 'N/A';
+    }
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) {
+      return 'N/A'; // Or display original string: dateString;
+    }
+    return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
   useEffect(() => {
-    async function fetchAppointments() {
+    async function fetchReports() {
       try {
         setLoading(true);
-        const response = await axios.get('http://192.168.28.205:5000/get_n_appointments/661abcd123456789abcdef00');
-        setAppointments(response.data);
-        setFilteredAppointments(response.data);
+        const response = await axios.get(`${import.meta.env.VITE_PATIENT_API_URL}/get_detailed_reports`);
+        console.log('Backend response:', response.data); // Added console.log
+        setReports(response.data);
+        setFilteredReports(response.data);
       } catch (error) {
-        console.error('Error fetching appointments:', error);
+        console.error('Error fetching reports:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchAppointments();    
+    fetchReports();    
   }, []);
 
   useEffect(() => {
-    let filtered = appointments.filter(appointment =>
-      appointment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment._id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = reports.filter(report => {
+      const term = searchTerm.toLowerCase();
+      // Updated fields for searching
+      const patientNameMatch = report.patient_name && report.patient_name.toLowerCase().includes(term);
+      const summaryMatch = report.summary && report.summary.toLowerCase().includes(term);
+      const idMatch = report._id && report._id.toLowerCase().includes(term);
+      // Removed doctorNameMatch as it's not in the report object
+      return patientNameMatch || summaryMatch || idMatch;
+    });
 
     if (filterStatus !== 'all') {
-      // You can add status filtering logic here if your API provides status
-      // filtered = filtered.filter(appointment => appointment.status === filterStatus);
+      // Status filtering logic would need to be adapted if 'status' field were available in reports
+      // For now, this part remains non-functional for status filtering
     }
 
-    setFilteredAppointments(filtered);
-  }, [searchTerm, filterStatus, appointments]);
+    setFilteredReports(filtered);
+  }, [searchTerm, filterStatus, reports]);
 
-  const handlePatientClick = (patientId) => {
-    navigate(`/PatientDetails/${patientId}`);
+  const handlePatientClick = (reportId) => {
+    // Assuming report._id is the correct identifier for PatientDetails page
+    navigate(`/PatientDetails/${reportId}`);
   };
 
   const getTimeGreeting = () => {
@@ -65,11 +84,13 @@ function DoctorDashboard() {
     return 'Good evening';
   };
 
+  // Stats might need re-evaluation based on what 'reports.length' signifies
   const stats = [
-    { label: 'Total Patients', value: appointments.length, icon: Users, color: 'bg-blue-500' },
-    { label: 'Today\'s Appointments', value: appointments.length, icon: Calendar, color: 'bg-green-500' },
-    { label: 'Pending Reviews', value: Math.floor(appointments.length * 0.3), icon: Clock, color: 'bg-yellow-500' },
-    { label: 'Completed', value: Math.floor(appointments.length * 0.7), icon: CheckCircle, color: 'bg-purple-500' },
+    { label: 'Total Reports', value: reports.length, icon: FileText, color: 'bg-blue-500' },
+    { label: 'Reports Logged', value: reports.length, icon: Calendar, color: 'bg-green-500' }, // Changed label
+    // These are example stats, their meaning might change with new data
+    { label: 'Summaries to Review', value: Math.floor(reports.length * 0.3), icon: Clock, color: 'bg-yellow-500' },
+    { label: 'Archived Reports', value: Math.floor(reports.length * 0.7), icon: CheckCircle, color: 'bg-purple-500' },
   ];
 
   if (loading) {
@@ -95,7 +116,7 @@ function DoctorDashboard() {
                 {getTimeGreeting()}, {doctorName}!
               </h1>
               <p className="text-gray-600 text-lg">
-                You have {appointments.length} appointments today. Keep up the excellent work!
+                You have {reports.length} reports in the system.
               </p>
             </div>
             <div className="hidden md:block">
@@ -124,7 +145,7 @@ function DoctorDashboard() {
         {/* Search and Filter Section */}
         <div className="card rounded-xl p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Today's Appointments</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Detailed Patient Reports</h2>
             
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Search Bar */}
@@ -132,14 +153,14 @@ function DoctorDashboard() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <input
                   type="text"
-                  placeholder="Search patients..."
+                  placeholder="Search reports..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                 />
               </div>
               
-              {/* Filter Dropdown */}
+              {/* Filter Dropdown (currently not functional for status) */}
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <select
@@ -147,60 +168,64 @@ function DoctorDashboard() {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300 appearance-none bg-white"
                 >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="all">All Reports</option>
+                  {/* Add other status options if applicable and data supports it */}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Appointments List */}
+          {/* Reports List */}
           <div className="space-y-4">
-            {filteredAppointments.length === 0 ? (
+            {filteredReports.length === 0 ? (
               <div className="text-center py-12">
                 <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No appointments found</p>
+                <p className="text-gray-500 text-lg">No reports found</p>
               </div>
             ) : (
-              filteredAppointments.map((appointment, index) => (
+              filteredReports.map((report, index) => (
                 <div
-                  key={`${appointment._id}-${index}`}
+                  key={`${report._id}-${index}`}
                   className="group bg-white rounded-xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-                  onClick={() => handlePatientClick(appointment.patient_id)}
+                  onClick={() => handlePatientClick(report._id)} // Use report._id
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       {/* Avatar */}
                       <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                        <User className="h-6 w-6 text-white" />
+                        <User className="h-6 w-6 text-white" /> {/* Changed icon to User */}
                       </div>
                       
-                      {/* Patient Info */}
+                      {/* Report Info */}
                       <div className="space-y-1">
                         <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                          {appointment.name}
+                          {report.patient_name || 'N/A'} {/* Display patient_name */}
                         </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex flex-col space-y-1 mt-1 text-sm text-gray-600">
                           <span className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            Age {appointment.age} • {appointment.sex}
+                            <Calendar className="h-4 w-4 mr-1.5 text-indigo-500" />
+                            DOB: {formatDate(report.date_of_birth)} {/* Display date_of_birth */}
                           </span>
                           <span className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            ID: {appointment._id.slice(-8)}
+                            <User className="h-4 w-4 mr-1.5 text-indigo-500" />
+                            Doctor: {doctorName} {/* Use static doctorName */}
                           </span>
+                           <span className="flex items-center"> {/* Added gender */}
+                            <Users className="h-4 w-4 mr-1.5 text-indigo-500" />
+                            Gender: {report.gender || 'N/A'}
+                          </span>
+                          <span className="flex items-center mt-1">
+                            <FileText className="h-4 w-4 mr-1.5 text-indigo-500 flex-shrink-0" />
+                            <span className="truncate" title={report.summary}>
+                              Summary: {report.summary ? report.summary.substring(0, 60) + (report.summary.length > 60 ? '...' : '') : 'N/A'}
+                            </span>
+                          </span>
+                           <span className="text-xs text-gray-400 mt-1">Report ID: {report._id ? report._id.slice(-8) : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Action Arrow */}
-                    <div className="flex items-center space-x-3">
-                      <div className="hidden sm:flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">View Details</span>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                    <div className="hidden sm:block">
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
                     </div>
                   </div>
                 </div>
