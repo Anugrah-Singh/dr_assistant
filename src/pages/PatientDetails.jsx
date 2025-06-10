@@ -10,7 +10,7 @@ function PatientDetails() {
   
 	async function getPatientData() {
 		try {
-			const response = await axios.get(`http://192.168.28.205:2000/get_detailed_report/${patient_id}`);
+			const response = await axios.get(`http://192.168.197.17:5000/get_detailed_report/${patient_id}`);
 			console.log("Patient data:", response.data);
 			setPatientData(response.data);
 		} catch (error) {
